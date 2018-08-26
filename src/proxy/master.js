@@ -4,8 +4,19 @@ const utils = require('../utils')
 const log = require('../logging')
 const http = require('http')
 
-class ProxySlave {
+class ProxyWorkerConn {
+  constructor(host, socketConn) {
+    this.host = host
+    this.socketConn = socketConn
+  }
+}
 
+function remove(arr, item) {
+  for (let i = arr.length; i--;) {
+    if (arr[i] === item) {
+      arr.splice(i, 1)
+    }
+  }
 }
 
 class ProxyMaster {
@@ -22,28 +33,49 @@ class ProxyMaster {
 
   async getProxies(req, res) {
     log.info(`Fetching request proxies. Currently available ${this.proxies}`)
-    res.json(this.proxies)
+    res.json(this.proxies.map(p => p.host))
   }
 
   async handleProxyConn(client) {
     log.info(`Received proxy connection from ${client}`)
+    const firstMessage = await new Promise((resolve, reject) => {
+      client.on('message', (event) => {
+        resolve(event)
+      })
+    })
+
+    log.info(`The first message is assigning host ${firstMessage.host}`)
+
+    const newProxyConn = new ProxyWorkerConn(firstMessage.host, client)
+    this.proxies.push(newProxyConn)
+
+    await new Promise((resolve, reject) => {
+      client.on('disconnect', () => {
+        resolve()
+      })
+    })
+
+    log.info(`Proxy with host ${firstMessage.host} disconnected. Removing.`)
+    remove(this.proxies, newProxyConn)
   }
 
   async run() {
+
+    const config = this.config
     await new Promise((resolve, reject) => {
-      this.publicApp.listen(config.PUBLIC_PORT, config.PUBLIC_IP, () => {
+      this.publicApp.listen(config.PUBLIC_PORT, config.PUBLIC_HOST, () => {
         resolve()
       }).on('error', (e) => reject(e))
     })
 
     await new Promise((resolve, reject) => {
-      this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_IP, (err) => {
+      this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_HOST, (err) => {
         resolve()
       }).on('error', (e) => reject(e))
     })
 
     await new Promise((resolve, reject) => {
-      this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_IP, (err) => {
+      this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_HOST, (err) => {
         resolve()
       }).on('error', (e) => reject(e))
     })

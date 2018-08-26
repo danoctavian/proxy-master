@@ -61,5 +61,10 @@ typings/
 .next
 
 # scaleway
+scalewayconf.json
 
-.scalewayconf.json
+# python
+venv
+
+# intellij
+.idea

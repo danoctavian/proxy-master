@@ -1,0 +1,25 @@
+{
+  "name": "proxy-master",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danoctavian/proxy-master.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danoctavian/proxy-master/issues"
+  },
+  "homepage": "https://github.com/danoctavian/proxy-master#readme",
+  "dependencies": {
+    "express": "^4.16.3",
+    "http-proxy": "^1.17.0",
+    "socket.io": "^2.1.1",
+    "winston": "^3.0.0"
+  }
+}

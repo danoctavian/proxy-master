@@ -63,13 +63,7 @@ class ProxyMaster {
 
     const config = this.config
     await new Promise((resolve, reject) => {
-      this.publicApp.listen(config.PUBLIC_PORT, config.PUBLIC_HOST, () => {
-        resolve()
-      }).on('error', (e) => reject(e))
-    })
-
-    await new Promise((resolve, reject) => {
-      this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_HOST, (err) => {
+      this.publicApp.listen(config.PUBLIC_PORT, () => {
         resolve()
       }).on('error', (e) => reject(e))
     })

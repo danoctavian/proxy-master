@@ -8,7 +8,9 @@ const PROXY_WORKER_NAME = 'proxy-worker'
 const UBUNTU_XENIAL_IMAGE = '67375eb1-f14d-4f02-bb42-6119cecbde51'
 
 const setupScript = `
-sudo apt-get -y install git curl python-software-properties ;
+sudo apt-get -y install git ;
+sudo apt-get -y curl ;
+sudo apt-get -y python-software-properties ;
 curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - ;
 sudo apt-get -y install nodejs ;
 rm -rf proxy-master ;

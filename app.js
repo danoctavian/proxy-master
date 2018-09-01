@@ -12,8 +12,7 @@ const MASTER_PORT = 3000
     log.info('Starting up master node.')
 
     const config = {
-      PUBLIC_HOST: process.argv[3],
-      PRIVATE_HOST: process.argv[4],
+      PRIVATE_HOST: process.argv[3],
       PUBLIC_PORT: 2000,
       PRIVATE_PORT: MASTER_PORT
     }

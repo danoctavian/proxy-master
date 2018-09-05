@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/danoctavian/proxy-master#readme",
   "dependencies": {
+    "anyproxy": "^4.0.12",
     "axios": "^0.18.0",
     "express": "^4.16.3",
-    "http-proxy": "^1.17.0",
     "node-ssh": "^5.1.2",
     "socket.io": "^2.1.1",
     "ssh2": "^0.6.1",

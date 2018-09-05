@@ -16,6 +16,7 @@ sudo apt-get -y install nodejs ;
 rm -rf proxy-master ;
 git clone https://github.com/danoctavian/proxy-master.git ;
 cd proxy-master ;
+npm install
 `
 
 function sleep(ms) {

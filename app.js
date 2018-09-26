@@ -5,6 +5,10 @@ const log = require('./src/logging')
 
 const MASTER_PORT = 3000
 
+process.on('unhandledRejection', (error, p) => {
+  log.error(`Unhandled Rejection at: ${error.stack}`)
+})
+
 ;(async () => {
   const cmd = process.argv[2]
 

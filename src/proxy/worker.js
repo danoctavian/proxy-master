@@ -36,7 +36,8 @@ class ProxyWorker {
     proxyServer.on('error', (e) => {
       log.error(`Proxy failed with error ${e}`)
     })
-    this.maintainConnection()
+
+    await this.connectToMaster()
   }
 
   async connectToMaster() {
@@ -46,44 +47,28 @@ class ProxyWorker {
     this.socket = socketio(socketIOMasterAddress)
     const socket = this.socket
 
-    await new Promise((resolve, reject) => {
-      socket.on('connect', () => {
-        resolve()
-      })
-      socket.on('error', (e) => {
-        reject(e)
-      })
-      socket.on('disconnect', () => {
-        reject(new Error(`Disconnected from ${socketIOMasterAddress}`))
-      })
-    })
-
-    log.info('Successfully connected. Notifying of proxy HOST')
-    socket.send({host: this.config.PUBLIC_HOST})
-  }
-
-  async maintainConnection() {
-
     while (true) {
-      try {
-        await this.connectToMaster()
-
-        log.info(`Watching out for disconnects..`)
-        const socket = this.socket
-        const err = await new Promise((resolve, reject) => {
-          socket.on('error', (e) => {
-            resolve(e)
-          })
-          socket.on('disconnect', () => {
-            resolve(new Error(`Disconnected from master`))
-          })
+      await new Promise((resolve, reject) => {
+        socket.on('connect', () => {
+          resolve()
         })
-        log.error(`Disconnected from master. ${err}. Attempting to reconnect`)
-      } catch (e) {
-        log.error(`Failed to reconnect ${e}. Retrying in ${RECONNECT_RETRY_TIME} ms.`)
-        await utils.sleep(RECONNECT_RETRY_TIME)
-      }
+        socket.on('error', (e) => {
+          reject(e)
+        })
+      })
+
+      log.info('Successfully connected. Notifying of proxy HOST')
+      socket.send({host: this.config.PUBLIC_HOST})
+
+      const disconnect = await new Promise((resolve, reject) => {
+        socket.on('disconnect', () => {
+          resolve()
+        })
+      })
+
+      log.info(`Disconnect happened. Attempting reconnect.`)
     }
+
   }
 }
 

@@ -7,7 +7,12 @@
  */
 const wrapAPI = fn => (...args) => fn(...args).catch(args[2])
 
+function sleep(time) {
+  return new Promise((resolve) => setTimeout(resolve, time))
+}
+
 
 module.exports = {
-  wrapAPI
+  wrapAPI,
+  sleep
 }

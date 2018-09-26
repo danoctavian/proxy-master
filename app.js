@@ -37,5 +37,6 @@ const MASTER_PORT = 3000
     process.exit(1)
   }
 })().catch(e => {
-  log.error(`Process error: ${e.stack}`)
+  log.error(`Fatal Process error: ${e.stack}. Exiting`)
+  process.exit(1)
 })

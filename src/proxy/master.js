@@ -25,10 +25,15 @@ class ProxyMaster {
     this.publicApp = express()
     this.proxies = []
     this.publicApp.get('/proxies', utils.wrapAPI(this.getProxies.bind(this)))
+    this.publicApp.get('/version', utils.wrapAPI(this.version.bind(this)))
 
     this.proxiesServer = http.createServer()
     this.proxiesApp = socketio(this.proxiesServer)
     this.proxiesApp.on('connection', this.handleProxyConn.bind(this))
+  }
+
+  async version(req, res) {
+    res.json({'version': utils.getPackageVersion()})
   }
 
   async getProxies(req, res) {
@@ -62,12 +67,14 @@ class ProxyMaster {
   async run() {
 
     const config = this.config
+    log.info(`Running http server at port ${config.PUBLIC_PORT}`)
     await new Promise((resolve, reject) => {
       this.publicApp.listen(config.PUBLIC_PORT, () => {
         resolve()
       }).on('error', (e) => reject(e))
     })
 
+    log.info(`Running socket io proxies server at port ${config.PRIVATE_HOST}:${config.PUBLIC_PORT}`)
     await new Promise((resolve, reject) => {
       this.proxiesServer.listen(config.PRIVATE_PORT, config.PRIVATE_HOST, (err) => {
         resolve()

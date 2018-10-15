@@ -1,6 +1,6 @@
 const AnyProxy = require('anyproxy')
-const http = require('http')
 const socketio = require('socket.io-client')
+const express = require('express')
 const log = require('../logging')
 const utils = require('../utils')
 
@@ -22,10 +22,25 @@ class ProxyWorker {
       silent: false
     }
     this.proxyServer = new AnyProxy.ProxyServer(this.options)
+
+    this.publicApp = express()
+    this.publicApp.get('/version', utils.wrapAPI(this.version.bind(this)))
+  }
+
+  async version(req, res) {
+    res.json({'version': utils.getPackageVersion()})
   }
 
   async run() {
     const config = this.config
+
+    log.info(`Running http server at port ${config.PUBLIC_HTTP_PORT}`)
+    await new Promise((resolve, reject) => {
+      this.publicApp.listen(config.PUBLIC_HTTP_PORT, () => {
+        resolve()
+      }).on('error', (e) => reject(e))
+    })
+
     log.info(`listening on ${config.PORT} for proxy connections..`)
     this.proxyServer.start()
     const proxyServer = this.proxyServer

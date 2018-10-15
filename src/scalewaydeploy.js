@@ -124,7 +124,7 @@ class ScalewayDeployer {
 
       await Promise.all(creationTasks)
     } else {
-        log.error('There are more alive workers than desiredCount. Kill some manually.')
+        log.error(`There are more alive workers (${workerServers.length}) than desiredCount (${config.desiredCount}). Kill some manually.`)
     }
 
   }

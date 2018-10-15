@@ -4,6 +4,7 @@ const log = require('./src/logging')
 
 
 const MASTER_PORT = 3000
+const PUBLIC_HTTP_PORT = 2000
 
 process.on('unhandledRejection', (error, p) => {
   log.error(`Unhandled Rejection at: ${error.stack}`)
@@ -17,7 +18,7 @@ process.on('unhandledRejection', (error, p) => {
 
     const config = {
       PRIVATE_HOST: process.argv[3],
-      PUBLIC_PORT: 2000,
+      PUBLIC_PORT: PUBLIC_HTTP_PORT,
       PRIVATE_PORT: MASTER_PORT
     }
     const proxyMaster = new Master(config)
@@ -30,7 +31,8 @@ process.on('unhandledRejection', (error, p) => {
       PUBLIC_HOST: process.argv[3],
       PORT: process.argv[4],
       MASTER_HOST: process.argv[5],
-      MASTER_PORT: MASTER_PORT
+      MASTER_PORT: MASTER_PORT,
+      PUBLIC_HTTP_PORT: PUBLIC_HTTP_PORT
     }
 
     const proxyWorker = new ProxyWorker(config)

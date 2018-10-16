@@ -2,6 +2,7 @@ const axios = require('axios')
 const fs = require('fs')
 SSHClient = require('node-ssh')
 const log = require('./logging')
+const semver = require('semver')
 
 const PROXY_MASTER_NAME = 'proxy-master'
 const PROXY_WORKER_NAME = 'proxy-worker'
@@ -14,10 +15,11 @@ sudo apt-get -y install curl ;
 sudo apt-get -y install python-software-properties ;
 curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - ;
 sudo apt-get -y install nodejs ;
+npm install -g pm2;
 rm -rf proxy-master ;
 git clone https://github.com/danoctavian/proxy-master.git ;
 cd proxy-master ;
-npm install
+npm install;
 `
 
 function sleep(ms) {
@@ -34,6 +36,7 @@ class ScalewayDeployer {
   }
 
   async deploy(config) {
+    this.config = config
     const configFile = await fs.readFileSync('scalewayconf.json')
     const authconfig = JSON.parse(configFile)
 
@@ -62,20 +65,24 @@ class ScalewayDeployer {
       throw new Error('Too many masters. Only 1 is required.')
     }
 
+    let masterServer = null
+
     if (config.master) {
-      await this.deployMaster(masterServers)
+      masterServer = await this.deployMaster(masterServers)
       await this.updateServers(masterServers, config.versionConstraint)
     }
 
     if (config.worker) {
       await this.deployWorkers(workerServers, config.worker)
-      await this.updateServers(workerServers, config.versionConstraint)
+      await this.updateServers(workerServers,
+        (id) => `node app.js proxy ${id}.pub.cloud.scaleway.com 4000 ${masterServer.id}.priv.cloud.scaleway.com`,
+        config.versionConstraint)
     }
   }
 
-  async updateServers(servers, versionConstraint) {
+  async updateServers(servers, getServerCommand, versionConstraint) {
     if (!versionConstraint) {
-      log.info(`No version constraint specified. No updates will be performed.`)
+      log.info(`No version constraint specified. No software updates will be performed.`)
       return
     }
 
@@ -99,10 +106,10 @@ class ScalewayDeployer {
         continue
       }
 
-      const version = versionResponse.body.version
+      const version = versionResponse.data.version
       const satisfies = semver.satisfies(version, versionConstraint)
       log.info(`Version for ${servers[0].name} is ${version} and satisfies ${versionConstraint} : ${satisfies}`)
-      serversToBeUpdated.append(server)
+      serversToBeUpdated.push(server)
     }
 
     log.info(`Number of servers that need updates: ${serversToBeUpdated.length}. Starting updates concurrently.`)
@@ -111,25 +118,25 @@ class ScalewayDeployer {
       try {
         await this.applySoftwareUpdate(server)
       } catch (e) {
-        log.error(`Failed to update server ${server.name}`)
+        log.error(`Failed to update server ${server.name} ${e}`)
       }
     }))
   }
 
   async applySoftwareUpdate(server) {
-    log.info(`Updating server ${server.name}`)
+    log.info(`SSH ${server.name} - Updating server.`)
     const ssh = new SSHClient()
     await ssh.connect({
       host: server.public_ip.address,
       username: 'root',
-      privateKey: config.sshKey
+      privateKey: this.config.sshKey
     })
 
-    log.info(`SSH conn to ${server.public_ip.address} ready. deploying setup script and then running it.`)
+    log.info(`SSH ${server.name} - SSH conn to ${server.public_ip.address} ready. deploying setup script and then running it.`)
     await ssh.putFiles([{ local: './setup.sh', remote: '/root/setup.sh'}])
 
     const result = await ssh.exec('bash ./setup.sh')
-    console.log(result)
+    log.info(`SSH ${server.name} - ${result}`)
   }
 
   async deployMaster(masterServers) {
@@ -144,6 +151,8 @@ class ScalewayDeployer {
       log.info(`Master already present.`)
       masterServer = masterServers[0]
     }
+
+    return masterServer
   }
 
   async deployWorkers(workerServers, config) {
@@ -210,8 +219,5 @@ class ScalewayDeployer {
     return newServer
   }
 }
-
-
-
 
 module.exports = ScalewayDeployer

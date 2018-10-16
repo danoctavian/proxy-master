@@ -98,7 +98,7 @@ class ScalewayDeployer {
       try {
         versionResponse = await axios.get(`http://${ip}:2000/version`)
       } catch (e) {
-        if (e.message.includes('404') || e.message.includes('ECONNREFUSED')) {
+        if (e.message.includes('ECONNREFUSED')) {
           log.warn(`server ${server.name} does not have endpoint /version. skipping`)
         } else {
           log.error(`Failed to query server ${server.name} with ${e.stack}`)

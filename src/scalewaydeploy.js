@@ -1,6 +1,6 @@
 const axios = require('axios')
 const fs = require('fs')
-SSHClient = require('node-ssh')
+const SSHClient = require('node-ssh')
 const log = require('./logging')
 const semver = require('semver')
 
@@ -109,7 +109,9 @@ class ScalewayDeployer {
       const version = versionResponse.data.version
       const satisfies = semver.satisfies(version, versionConstraint)
       log.info(`Version for ${servers[0].name} is ${version} and satisfies ${versionConstraint} : ${satisfies}`)
-      serversToBeUpdated.push(server)
+      if (satisfies) {
+        serversToBeUpdated.push(server)
+      }
     }
 
     log.info(`Number of servers that need updates: ${serversToBeUpdated.length}. Starting updates concurrently.`)

@@ -61,7 +61,7 @@ class ScalewayDeployer {
     if (config.worker) {
       await this.deployWorkers(workerServers, config.worker)
       await this.updateServers(workerServers,
-        (id) => `node app.js proxy ${id}.pub.cloud.scaleway.com 4000 ${masterServer.id}.priv.cloud.scaleway.com`,
+        (id) => `proxy ${id}.pub.cloud.scaleway.com 4000 ${masterServer.id}.priv.cloud.scaleway.com`,
         config.updateConstraints)
     }
   }
@@ -115,15 +115,16 @@ class ScalewayDeployer {
 
     await Promise.all(serversToBeUpdated.map(async server =>  {
       try {
-        await this.applySoftwareUpdate(server)
+        const serverParams = getServerCommand(server.id)
+        await this.applySoftwareUpdate(server, serverParams)
       } catch (e) {
         log.error(`Failed to update server ${server.name} ${e}`)
       }
     }))
   }
 
-  async applySoftwareUpdate(server) {
-    log.info(`SSH ${server.name} - Updating server.`)
+  async applySoftwareUpdate(server, serverParams) {
+    log.info(`SSH ${server.name} - Updating server. Using params: ${serverParams}`)
     const ssh = new SSHClient()
     await ssh.connect({
       host: server.public_ip.address,
@@ -134,7 +135,7 @@ class ScalewayDeployer {
     log.info(`SSH ${server.name} - SSH conn to ${server.public_ip.address} ready. deploying setup script and then running it.`)
     await ssh.putFiles([{ local: './setup.sh', remote: '/root/setup.sh'}])
 
-    const result = await ssh.exec('bash ./setup.sh')
+    const result = await ssh.exec(`bash ./setup.sh ${serverParams}`)
     log.info(`SSH ${server.name} - ${result}`)
   }
 

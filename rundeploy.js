@@ -9,7 +9,10 @@ const log = require('./src/logging')
     worker: {
       desiredCount: 9
     },
-    versionConstraint: '< 1.1.0'
+    updateConstraints: {
+      version: '<= 1.1.0',
+      newerThan: new Date('2018-10-15T21:00:05.952426+00:00')
+    }
   })
 })().catch(e => {
   log.error(`Deploy error: ${e.stack}`)

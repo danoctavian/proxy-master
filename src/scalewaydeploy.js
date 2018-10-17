@@ -8,20 +8,6 @@ const PROXY_MASTER_NAME = 'proxy-master'
 const PROXY_WORKER_NAME = 'proxy-worker'
 const UBUNTU_XENIAL_IMAGE = '67375eb1-f14d-4f02-bb42-6119cecbde51'
 
-const setupScript = `
-sudo apt-get update ;
-sudo apt-get -y install git ;
-sudo apt-get -y install curl ;
-sudo apt-get -y install python-software-properties ;
-curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - ;
-sudo apt-get -y install nodejs ;
-npm install -g pm2;
-rm -rf proxy-master ;
-git clone https://github.com/danoctavian/proxy-master.git ;
-cd proxy-master ;
-npm install;
-`
-
 function sleep(ms) {
   return new Promise(resolve => {
     setTimeout(resolve, ms)
@@ -69,24 +55,24 @@ class ScalewayDeployer {
 
     if (config.master) {
       masterServer = await this.deployMaster(masterServers)
-      await this.updateServers(masterServers, config.versionConstraint)
+      await this.updateServers(masterServers, (id) => `echo ${id}`, config.updateConstraints)
     }
 
     if (config.worker) {
       await this.deployWorkers(workerServers, config.worker)
       await this.updateServers(workerServers,
         (id) => `node app.js proxy ${id}.pub.cloud.scaleway.com 4000 ${masterServer.id}.priv.cloud.scaleway.com`,
-        config.versionConstraint)
+        config.updateConstraints)
     }
   }
 
-  async updateServers(servers, getServerCommand, versionConstraint) {
-    if (!versionConstraint) {
-      log.info(`No version constraint specified. No software updates will be performed.`)
+  async updateServers(servers, getServerCommand, updateConstraints) {
+    if (!updateConstraints || !updateConstraints.version || !updateConstraints.newerThan) {
+      log.info(`No update constraints specified. No software updates will be performed.`)
       return
     }
 
-    log.info(`Checking for necessary updates on ${servers.length} servers with version constraint ${versionConstraint}`)
+    log.info(`Checking for necessary updates on ${servers.length} servers with update constraints ${JSON.stringify(updateConstraints)}`)
 
     const serversToBeUpdated = []
     for (let i = 0; i < servers.length; i++) {
@@ -95,21 +81,32 @@ class ScalewayDeployer {
       log.info(`Checking version for server ${servers[0].name} at ip ${ip}`)
 
       let versionResponse = null
+      let skipVersionCheck = false
       try {
         versionResponse = await axios.get(`http://${ip}:2000/version`)
       } catch (e) {
-        if (e.message.includes('ECONNREFUSED')) {
-          log.warn(`server ${server.name} does not have endpoint /version. skipping`)
+        if (e.message.includes('404') || e.message.includes('ECONNREFUSED')) {
+          log.warn(`server ${server.name} does not have endpoint /version. skipping version check.`)
+          skipVersionCheck = true
         } else {
           log.error(`Failed to query server ${server.name} with ${e.stack}`)
+          continue
         }
-        continue
       }
 
-      const version = versionResponse.data.version
-      const satisfies = semver.satisfies(version, versionConstraint)
-      log.info(`Version for ${servers[0].name} is ${version} and satisfies ${versionConstraint} : ${satisfies}`)
-      if (satisfies) {
+      let satisfiesVersion = false
+      if (skipVersionCheck) {
+        satisfiesVersion = true
+      } else {
+        const version = versionResponse.data.version
+        satisfiesVersion = semver.satisfies(version, updateConstraints.version)
+        log.info(`Version for ${servers[0].name} is ${version} and satisfies ${updateConstraints.version} : ${satisfiesVersion}`)
+      }
+
+      const satisfiesNewerThan = new Date(server.modification_date) > updateConstraints.newerThan
+      log.info(`mod date for ${servers[0].name} is ${server.modification_date} and satisfies ${updateConstraints.newerThan} : ${satisfiesNewerThan}`)
+
+      if (satisfiesVersion && satisfiesNewerThan) {
         serversToBeUpdated.push(server)
       }
     }
@@ -210,8 +207,17 @@ class ScalewayDeployer {
 
     while (newServer.server.state !== 'running') {
       await sleep(1000)
-      newServerRes = await axios.get(`${BASE_URL}/servers/${newServer.server.id}`, this.conf)
-      newServer = newServerRes.data
+      try {
+        newServerRes = await axios.get(`${BASE_URL}/servers/${newServer.server.id}`, this.conf)
+        newServer = newServerRes.data
+      } catch (e) {
+        if (e.message.includes('ETIMEOUT')) {
+          log.warn(`Polling ${newServer.server.id} timed out. reinitiating polling..`)
+          continue
+        } else {
+          throw e
+        }
+      }
     }
 
     log.info(`Server ${newServer.server.id} operational at public IP ${newServer.server.public_ip.address}. waiting for a bit..`)

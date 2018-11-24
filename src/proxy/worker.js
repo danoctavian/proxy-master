@@ -34,14 +34,14 @@ class ProxyWorker {
   async run() {
     const config = this.config
 
-    log.info(`Running http server at port ${config.PUBLIC_HTTP_PORT}`)
+    log.info(`WORKER - Running http server at port ${config.PUBLIC_HTTP_PORT}`)
     await new Promise((resolve, reject) => {
       this.publicApp.listen(config.PUBLIC_HTTP_PORT, () => {
         resolve()
       }).on('error', (e) => reject(e))
     })
 
-    log.info(`listening on ${config.PORT} for proxy connections..`)
+    log.info(`WORKER - listening on ${config.PORT} for proxy connections..`)
     this.proxyServer.start()
     const proxyServer = this.proxyServer
     await new Promise((resolve, reject) => {
@@ -57,7 +57,7 @@ class ProxyWorker {
 
   async connectToMaster() {
     const socketIOMasterAddress = `http://${this.config.MASTER_HOST}:${this.config.MASTER_PORT}`
-    log.info(`Connecting with socket.io to master at ${socketIOMasterAddress}`)
+    log.info(`WORKER - Connecting with socket.io to master at ${socketIOMasterAddress}`)
 
     this.socket = socketio(socketIOMasterAddress)
     const socket = this.socket
@@ -72,7 +72,7 @@ class ProxyWorker {
         })
       })
 
-      log.info('Successfully connected. Notifying of proxy HOST')
+      log.info('WORKER - Successfully connected. Notifying of proxy HOST')
       socket.send({host: this.config.PUBLIC_HOST})
 
       const disconnect = await new Promise((resolve, reject) => {
@@ -81,7 +81,7 @@ class ProxyWorker {
         })
       })
 
-      log.info(`Disconnect happened. Attempting reconnect.`)
+      log.info(`WORKER - Disconnect happened. Attempting reconnect.`)
     }
 
   }

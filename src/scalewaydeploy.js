@@ -89,8 +89,8 @@ class ScalewayDeployer {
           log.warn(`server ${server.name} does not have endpoint /version. skipping version check.`)
           skipVersionCheck = true
         } else {
-          log.error(`Failed to query server ${server.name} with ${e.stack}`)
-          continue
+          log.error(`Failed to query server ${server.name} with ${e.stack}. Presuming it's down and proceeding.`)
+          skipVersionCheck = true
         }
       }
 

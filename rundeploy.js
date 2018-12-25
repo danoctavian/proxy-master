@@ -11,7 +11,7 @@ const log = require('./src/logging')
     },
     updateConstraints: {
       version: '<= 1.1.0',
-      newerThan: new Date('2018-10-15T21:00:05.952426+00:00')
+      newerThan: new Date('2018-07-15T21:00:05.952426+00:00')
     }
   })
 })().catch(e => {

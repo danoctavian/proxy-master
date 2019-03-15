@@ -52,7 +52,11 @@ class ProxyWorker {
       log.error(`Proxy failed with error ${e}`)
     })
 
-    await this.connectToMaster()
+    if (this.config.MASTER_HOST) {
+      await this.connectToMaster()
+    } else {
+      log.warn(`No Master url specified. Running standalone.`)
+    }
   }
 
   async connectToMaster() {
